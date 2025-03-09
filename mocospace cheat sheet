@@ -1,0 +1,2024 @@
+var MocoSpaceStreetWars = MocoSpaceStreetWars || (function() {
+    var d = [];
+    var f = [];
+    var b = null;
+    var k = null;
+    var c = null;
+    var a = null;
+    var e = true;
+    var m = false;
+    var g = true;
+    var h = false;
+
+    function i(A, z) {
+        A = A || {};
+        var v = z && z.clientX ? z.clientX : -1;
+        var t = z && z.clientY ? z.clientY : -1;
+        var s = +new Date();
+        var u = parseInt(z.target.getBoundingClientRect().top);
+        var q = parseInt(z.target.getBoundingClientRect().left);
+        var p = parseInt(z.target.getBoundingClientRect().width);
+        var w = parseInt(z.target.getBoundingClientRect().height);
+        var r = {};
+        r = {
+            healAmount: A.healAmount ? A.healAmount : null,
+            timestamp: s,
+            ts1: s - parseInt(v),
+            ts2: s - parseInt(t),
+            t: u,
+            l: q,
+            w: p,
+            h: w
+        };
+        var n = z.target.className ? (z.target.className.indexOf("headerstats") > 0 ? "header" : (z.target.className.indexOf("raid_quick_heal") > 0 ? "raid" : "dialog")) : undefined;
+        var o = "/wap2/game/streetwars/heal-api.jsp?r=" + new Date().getTime() + "&u=" + MocoSpaceAPI.loggedInUserId + "&src=" + n;
+        MocoSpaceAPI.executePOSTRequest(o, A, r)
+    }
+
+    function l(o) {
+        o = o || {};
+        var n = "/servlet/api/internalgame/favorHeal.do";
+        var p = {
+            targetId: o.targetId
+        };
+        MocoSpaceAPI.executePOSTRequest(n, o, p)
+    }
+
+    function j(o) {
+        o = o || {};
+        var n = "/servlet/api/internalgame/bankDeposit.do";
+        MocoSpaceAPI.executePOSTRequest(n, o)
+    }
+    return {
+        displayErrorToast: function(n) {
+            if (m) {
+                if (typeof n === "undefined" || n == null) {
+                    n = MocoSpaceAPI.String.getString("Error - please reload page", [], false)
+                }
+                displayActionResultMessage(n, MocoSpaceUI.Header.MessageType.ERROR, 1000)
+            }
+        },
+        setShowHealthWarning: function(n) {
+            h = n
+        },
+        isShowHealthWarning: function() {
+            return h
+        },
+        setShowErrorToast: function(n) {
+            m = n
+        },
+        setShowSuccessToast: function(n) {
+            g = n
+        },
+        addGlobalUpdateStatsCallback: function(n) {
+            d[d.length] = n
+        },
+        getGlobalUpdateStatsCallbacks: function() {
+            return d
+        },
+        addGlobalUpdateTargetStatsCallback: function(n) {
+            f[f.length] = n
+        },
+        getGlobalUpdateTargetStatsCallbacks: function() {
+            return f
+        },
+        setHealCallback: function(n) {
+            k = n
+        },
+        getHealCallback: function() {
+            return k
+        },
+        setFavorHealCallback: function(n) {
+            c = n
+        },
+        getFavorHealCallback: function() {
+            return c
+        },
+        setBankDepositCallback: function(n) {
+            a = n
+        },
+        setAllowBankRedirect: function(n) {
+            e = n
+        },
+        getBankDepositCallback: function() {
+            return a
+        },
+        setHealQuitImmediatelyCallback: function(n) {
+            b = n
+        },
+        getHealQuitImmediatelyCallback: function(n) {
+            return b
+        },
+        bankDepositInit: function(o) {
+            if (o) {
+                o.onclick = null;
+                o.setAttribute("data-executing", 0);
+                var n = function(r) {
+                    if (typeof b === "function" && b()) {
+                        return
+                    }
+                    var q = document.querySelector("#game_cash_stat span.current_coins");
+                    if (q.innerHTML == "0" && e) {
+                        return
+                    }
+                    if (!parseInt(this.getAttribute("data-executing"))) {
+                        this.setAttribute("data-executing", 1);
+                        MocoSpaceUI.Util.addClass(this, "disabled");
+                        var p = {
+                            onError: function(u, s, t) {
+                                StreetWarsUtils.handleErrorRedirect(t);
+                                MocoSpaceStreetWars.displayErrorToast();
+                                o.setAttribute("data-executing", 0);
+                                MocoSpaceUI.Util.removeClass(o, "disabled")
+                            },
+                            onSuccess: function(s) {
+                                if (typeof s.error !== "undefined") {} else {
+                                    if (s.redirect) {
+                                        window.location = s.redirect
+                                    } else {
+                                        if (s.stats) {
+                                            updateHeaderStats(s.stats)
+                                        }
+                                    }
+                                    if (typeof s.actionResultMessage !== "undefined" && g) {
+                                        displayActionResultMessage(s.actionResultMessage)
+                                    }
+                                }
+                                if (MocoSpaceStreetWars.getBankDepositCallback()) {
+                                    MocoSpaceStreetWars.getBankDepositCallback()(s)
+                                }
+                                o.setAttribute("data-executing", 0);
+                                MocoSpaceUI.Util.removeClass(o, "disabled")
+                            }
+                        };
+                        j(p)
+                    }
+                    r.preventDefault();
+                    return false
+                };
+                o.addEventListener("click", n, false)
+            }
+        },
+        healInit: function(p, o) {
+            if (p) {
+                p.onclick = null;
+                p.setAttribute("data-executing", 0);
+                var n = function(r) {
+                    if (typeof b === "function" && b()) {
+                        return
+                    }
+                    if (!parseInt(this.getAttribute("data-executing"))) {
+                        this.setAttribute("data-executing", 1);
+                        var q = {
+                            timeout: 1000,
+                            onError: function(u, s, t) {
+                                if (!u) {
+                                    p.setAttribute("data-executing", 0);
+                                    return
+                                }
+                                StreetWarsUtils.handleErrorRedirect(t);
+                                MocoSpaceStreetWars.displayErrorToast();
+                                p.setAttribute("data-executing", 0);
+                                MocoSpaceUI.Util.removeClass(p, "disabled");
+                                if (MocoSpaceStreetWars.getHealCallback()) {
+                                    MocoSpaceStreetWars.getHealCallback()(u)
+                                }
+                                if (typeof t.message === "string" && t.message.indexOf("Player locked") > -1 && document.getElementById("game_fight_target_alert_message") && StreetWarsFightDialog) {
+                                    StreetWarsFightDialog.showMessage(document.getElementById("game_fight_target_alert_message"), "&Cross;")
+                                }
+                            },
+                            onSuccess: function(s) {
+                                if (!s) {
+                                    p.setAttribute("data-executing", 0);
+                                    return
+                                }
+                                if (typeof s.error !== "undefined") {
+                                    if (MocoSpaceStreetWars.getHealCallback()) {
+                                        MocoSpaceStreetWars.getHealCallback()(s)
+                                    }
+                                    displayActionResultMessage(s.error, MocoSpaceUI.Header.MessageType.ERROR)
+                                } else {
+                                    if (s.redirect) {
+                                        window.location = s.redirect
+                                    } else {
+                                        if (s.delay) {
+                                            setTimeout(function() {
+                                                p.setAttribute("data-executing", 0)
+                                            }, s.delay)
+                                        } else {
+                                            if (s.stats) {
+                                                updateHeaderStats(s.stats);
+                                                try {
+                                                    document.querySelector(".game_fight_revamp_portrait.left").style.opacity = 1
+                                                } catch (t) {}
+                                            }
+                                        }
+                                    }
+                                    if (typeof s.actionResultMessage !== "undefined" && s.healAmount > 0 && g) {
+                                        displayActionResultMessage(s.actionResultMessage)
+                                    }
+                                }
+                                if (MocoSpaceStreetWars.getHealCallback()) {
+                                    MocoSpaceStreetWars.getHealCallback()(s)
+                                }
+                                if (!s.delay) {
+                                    p.setAttribute("data-executing", 0)
+                                }
+                            }
+                        };
+                        i(q, r)
+                    }
+                    r.preventDefault();
+                    return false
+                };
+                p.addEventListener("click", n, false);
+                if (o) {
+                    window.addEventListener("keyup", function(q) {
+                        if (!q.defaultPrevented && q.keyCode !== "undefined") {
+                            if (q.keyCode == 72 && StreetWarsUtils && StreetWarsUtils.isDialogDisplayed()) {
+                                var s = new Date().getTime();
+                                var r = document.createEvent("Event");
+                                r.initEvent("click", true, true);
+                                r.clientX = s % 73;
+                                r.clientY = s % 71;
+                                p.dispatchEvent(r);
+                                q.preventDefault()
+                            }
+                        }
+                    }, true)
+                }
+            }
+        },
+        healTargetInit: function(o, n) {
+            if (o && n) {
+                o.onclick = null;
+                o.setAttribute("data-executing", 0);
+                var p = function(r) {
+                    if (typeof b === "function" && b()) {
+                        return
+                    }
+                    if (!parseInt(this.getAttribute("data-executing"))) {
+                        this.setAttribute("data-executing", 1);
+                        var q = {
+                            onError: function(u, s, t) {
+                                StreetWarsUtils.handleErrorRedirect(t);
+                                MocoSpaceStreetWars.displayErrorToast();
+                                o.setAttribute("data-executing", 0);
+                                MocoSpaceUI.Util.removeClass(o, "disabled");
+                                if (MocoSpaceStreetWars.getFavorHealCallback()) {
+                                    MocoSpaceStreetWars.getFavorHealCallback()(u)
+                                }
+                            },
+                            onSuccess: function(v) {
+                                if (typeof v.error !== "undefined") {
+                                    displayActionResultMessage(v.error, MocoSpaceUI.Header.MessageType.ERROR);
+                                    if (MocoSpaceStreetWars.getFavorHealCallback()) {
+                                        MocoSpaceStreetWars.getFavorHealCallback()(v)
+                                    }
+                                } else {
+                                    if (v.redirect) {
+                                        window.location = v.redirect
+                                    } else {
+                                        if (v.stats) {
+                                            updateHeaderStats(v.stats);
+                                            if (v.targetStats && v.targetStats.health) {
+                                                if (document.getElementById("game_fight_summary")) {
+                                                    var s = document.querySelector("#game_fight_summary .damage_dealt");
+                                                    if (s) {
+                                                        s.innerHTML = '<span class="damage_dealt color_white"><div class="game_icon_health"></div>&nbsp;' + formatCoins(v.targetStats.health) + "</span>";
+                                                        try {
+                                                            document.querySelector("#game_fight_summary .xp_gained").innerHTML = "";
+                                                            document.querySelector("#game_fight_summary .damage_taken").innerHTML = "";
+                                                            document.querySelector("#game_fight_summary .coins_stolen").innerHTML = ""
+                                                        } catch (w) {}
+                                                    }
+                                                }
+                                                if (MocoSpaceStreetWars.getGlobalUpdateTargetStatsCallbacks()) {
+                                                    var u = MocoSpaceStreetWars.getGlobalUpdateTargetStatsCallbacks();
+                                                    for (var t = 0; t < u.length; t++) {
+                                                        u[t](v.targetStats, v.freeFavorsLeft, v.favorsLeft, v.favorHealLabel)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (typeof v.actionResultMessage !== "undefined" && g) {
+                                        displayActionResultMessage(v.actionResultMessage)
+                                    }
+                                }
+                                if (MocoSpaceStreetWars.getFavorHealCallback()) {
+                                    MocoSpaceStreetWars.getFavorHealCallback()(v)
+                                }
+                                o.setAttribute("data-executing", 0)
+                            },
+                            targetId: n
+                        };
+                        l(q)
+                    }
+                    r.preventDefault();
+                    return false
+                };
+                if (window.clickHealTarget) {
+                    o.removeEventListener("click", window.clickHealTarget)
+                }
+                window.clickHealTarget = p;
+                o.addEventListener("click", window.clickHealTarget, false)
+            }
+        },
+        journalFightPreview: function(o) {
+            if (o) {
+                o.preventDefault()
+            }
+            var n = new XMLHttpRequest();
+            n.onreadystatechange = function() {
+                if (n.readyState == 4 && n.status == 200) {
+                    MocoSpaceUI.Dialog.show({
+                        id: "game_interstitial_journal_preview",
+                        content: n.responseText,
+                        className: "game_interstitial tutorial",
+                        title: MocoSpaceAPI.String.getString("Recent Attacks")
+                    });
+                    var p = document.querySelectorAll(".journal_preview_attacker");
+                    if (p) {
+                        for (var q = 0; q < p.length; q++) {
+                            p[q].onclick = function(s) {
+                                var r = s && s.clientX ? s.clientX : -1;
+                                var u = s && s.clientY ? s.clientY : -1;
+                                var t = document.getElementById("journal_preview_attacker_" + s.target.getAttribute("data-id"));
+                                if (typeof StreetWarsFight != "undefined" && StreetWarsFight.isVisible()) {
+                                    StreetWarsFight.setTarget(s.target.getAttribute("data-id"), s, false, false);
+                                    if (s) {
+                                        s.preventDefault()
+                                    }
+                                } else {
+                                    if (typeof StreetWarsUtils != "undefined" && StreetWarsUtils.isDialogDisplayed()) {
+                                        StreetWarsFightDialog.show(s.target.getAttribute("data-id"), t.getAttribute("data-image"), t.getAttribute("data-name"), false, null, {
+                                            x: r,
+                                            y: u
+                                        }, true);
+                                        if (s) {
+                                            s.preventDefault()
+                                        }
+                                    }
+                                }
+                                MocoSpaceUI.Dialog.hide({
+                                    id: "game_interstitial_journal_preview"
+                                })
+                            }
+                        }
+                    }
+                }
+            };
+            n.open("GET", "/wap2/game/streetwars/journal-preview.jsp?source=internal&r=" + new Date().getTime() + "&u=" + MocoSpaceAPI.loggedInUserId, true);
+            n.send(null)
+        }
+    }
+})();
+
+function updateHeaderStats(u) {
+    var o = "#game_header .func_headerstats";
+    var l = document.querySelector(o + ".health");
+    var s = document.querySelector(o + ".energy");
+    var g = document.querySelector(o + ".stamina");
+    var h = document.querySelector(o + ".mob_size");
+    var w = document.querySelector("#game_header .game_icon_journal");
+    var f = document.querySelector(o + ".current_xp");
+    var p = document.querySelector("#game_exp_fill");
+    var c = document.querySelector(o + ".level");
+    var k = document.querySelector(o + ".current_coins");
+    var b = document.querySelector(o + ".current_vault");
+    if (l && typeof u.health !== "undefined") {
+        var r = parseInt(l.getAttribute("data-health-max"));
+        var n = parseInt(l.getAttribute("data-health"));
+        if (u.health < r) {
+            if (n == r) {
+                headerHealth()
+            }
+            if (MocoSpaceStreetWars.isShowHealthWarning()) {
+                MocoSpaceUI.Util.addClass(l, "game_low_health_flash")
+            }
+        } else {
+            MocoSpaceUI.Util.removeClass(l, "game_low_health_flash")
+        }
+        l.innerHTML = u.health;
+        l.setAttribute("data-health", u.health)
+    }
+    if (s && typeof u.energy !== "undefined") {
+        var r = parseInt(s.getAttribute("data-energy-max"));
+        var n = parseInt(s.getAttribute("data-energy"));
+        if (u.energy < r && n == r && c == u.level) {
+            headerEnergy()
+        }
+        s.innerHTML = u.energy;
+        s.setAttribute("data-energy", u.energy)
+    }
+    if (g && typeof u.stamina !== "undefined") {
+        var r = parseInt(g.getAttribute("data-stamina-max"));
+        var n = parseInt(g.getAttribute("data-stamina"));
+        if (u.stamina < r && n == r) {
+            headerStamina()
+        }
+        g.innerHTML = u.stamina;
+        g.setAttribute("data-stamina", u.stamina)
+    }
+    if (h && typeof u.mobSize !== "undefined") {
+        h.innerHTML = u.mobSize
+    }
+    if (typeof u.hasUnreadMessages !== "undefined" && u.hasUnreadMessages && w) {
+        w.className = "game_icon_journal_unread"
+    }
+    if (f && typeof u.currentXP !== "undefined") {
+        f.innerHTML = formatCoins(u.currentXP)
+    }
+    if (p && typeof u.percentLevelXP !== "undefined") {
+        p.style.width = u.percentLevelXP + "%"
+    }
+    if (c && typeof u.level !== "undefined") {
+        c.innerHTML = u.level
+    }
+    if (k && typeof u.coins !== "undefined") {
+        k.innerHTML = formatCoins(parseInt(u.coins))
+    }
+    if (b && typeof u.vault !== "undefined") {
+        b.innerHTML = formatCoins(parseInt(u.vault))
+    }
+    var e = document.querySelector(o + ".current_rp");
+    if (e && typeof u.rp !== "undefined") {
+        e.innerHTML = formatCoins(parseInt(u.rp))
+    }
+    if (document.querySelector("#game_title.self")) {
+        var m = document.querySelector("#game_profile_health_stat .health");
+        if (m && u.health !== "undefined") {
+            m.innerHTML = formatCoins(parseInt(u.health))
+        }
+        var t = document.querySelector("#game_profile_health_stat_2 .health");
+        if (t && u.health !== "undefined") {
+            t.innerHTML = addCommas(u.health)
+        }
+        if (parseInt(u.health) >= 20) {
+            var d = document.querySelector(".blood_overlay");
+            if (d) {
+                d.innerHTML = ""
+            }
+        }
+        var j = document.querySelector("#game_profile_coins_stat");
+        if (j && u.coins !== "undefined") {
+            j.innerHTML = formatCoins(parseInt(u.coins))
+        }
+        var a = document.querySelector("#game_profile_vault_stat");
+        if (a && u.vault !== "undefined") {
+            a.innerHTML = formatCoins(parseInt(u.vault))
+        }
+    }
+    if (MocoSpaceStreetWars.getGlobalUpdateStatsCallbacks()) {
+        var v = MocoSpaceStreetWars.getGlobalUpdateStatsCallbacks();
+        for (var q = 0; q < v.length; q++) {
+            v[q](u)
+        }
+    }
+}
+
+function displayActionResultMessage(b, a, c) {
+    if (typeof b !== "undefined") {
+        MocoSpaceUI.Header.showMessage(b, {
+            type: a ? a : MocoSpaceUI.Header.MessageType.SUCCESS,
+            duration: c ? c : 3000,
+            compact: true
+        })
+    }
+}
+
+function sendMobRequest(d, k, f, o, n, j) {
+    if (!d) {
+        throw "sendMobRequest: id required"
+    }
+    o = o || {};
+    var l = n && n.clientX ? n.clientX : -1;
+    var i = n && n.clientY ? n.clientY : -1;
+    var h = parseInt(n.target.getBoundingClientRect().top);
+    var c = parseInt(n.target.getBoundingClientRect().left);
+    var b = parseInt(n.target.getBoundingClientRect().width);
+    var m = parseInt(n.target.getBoundingClientRect().height);
+    var g = +new Date();
+    var a = "/servlet/api/internalgame/sendMobRequest.do";
+    var e = {
+        toRecruitId: d,
+        publicValidator: k,
+        privateValidator: f,
+        timestamp: g,
+        ts1: g - parseInt(l),
+        ts2: g - parseInt(i),
+        t: h,
+        l: c,
+        w: b,
+        h: m
+    };
+    MocoSpaceAPI.executePOSTRequest(a, o, e)
+}
+
+function processMobRequest(c, e, b) {
+    if (typeof c != "boolean") {
+        throw "processMobRequest: isApproved required"
+    }
+    if (!e) {
+        throw "processMobRequest: id required"
+    }
+    b = b || {};
+    var a = "/servlet/api/internalgame/processMobRequest.do";
+    var d = {
+        isApproved: c,
+        id: e
+    };
+    MocoSpaceAPI.executePOSTRequest(a, b, d)
+}
+
+function fightOpponent(d, b) {
+    if (!d) {
+        throw "fightOpponent: id required"
+    }
+    b = b || {};
+    var a = "/servlet/api/internalgame/fightOpponent.do";
+    var c = {
+        id: d
+    };
+    MocoSpaceAPI.executePOSTRequest(a, b, c)
+}
+
+function doMission(e, b, d, a, f) {
+    if (!e) {
+        throw "doMission: locationId required"
+    }
+    if (!b) {
+        throw "doMission: missionId required"
+    }
+    d = d || {};
+    var c = "/wap2/game/streetwars/mission/mission-api.jsp?r=" + new Date().getTime() + "&u=" + MocoSpaceAPI.loggedInUserId;
+    var g = {
+        locationId: e,
+        missionId: b
+    };
+    MocoSpaceAPI.executePOSTRequest(c, d, g)
+}
+
+function destroyMessage(c) {
+    var a = document.getElementById("game_journal");
+    a.removeChild(c);
+    var b = a.querySelectorAll(".game_journal_entry");
+    if (b.length == 1) {
+        b[0].style.display = "block"
+    }
+}
+
+function updateFightResult(n) {
+    var t = document.querySelector("#game_dialog_title span");
+    if (document.querySelector("#game_fight_summary .fights_won")) {
+        if (!n.totalFightsWon) {
+            n.totalFightsWon = 0
+        }
+        document.querySelector("#game_fight_summary .fights_won").innerHTML = MocoSpaceAPI.String.getString("Won {0} fights", [n.totalFightsWon], false)
+    }
+    if (document.querySelector("#game_fight_summary .fights_lost")) {
+        if (!n.totalFightsLost) {
+            n.totalFightsLost = 0
+        }
+        document.querySelector("#game_fight_summary .fights_lost").innerHTML = MocoSpaceAPI.String.getString("Lost {0} fights", [n.totalFightsLost], false)
+    }
+    if (document.querySelector("#game_fight_summary .sp_won")) {
+        if (!n.playerGainedSkill) {
+            n.playerGainedSkill = 0
+        }
+        document.querySelector("#game_fight_summary .sp_won").innerHTML = MocoSpaceAPI.String.getString("Gained {0} skill points!", [n.playerGainedSkill], false)
+    }
+    var s = document.querySelector("#game_fight_summary .damage_dealt");
+    if (s && typeof n.opponentRemainingHealth !== "undefined" && typeof n.opponentLostHealth !== "undefined") {
+        if (n.opponentRemainingHealth < 1) {
+            s.innerHTML = MocoSpaceAPI.String.getString("You sent 'em packing!", [], false)
+        } else {
+            if (n.opponentLostHealth) {
+                s.innerHTML = MocoSpaceAPI.String.getString('<div class="game_icon_health"></div>&nbsp;{0}', [formatCoins(n.opponentRemainingHealth)], false);
+                s.innerHTML += "<br/>" + MocoSpaceAPI.String.getString("Dealt {0} damage", [n.opponentLostHealth], false)
+            } else {
+                s.innerHTML = ""
+            }
+        }
+    }
+    var m = document.querySelector("#game_fight_summary .damage_taken");
+    if (m) {
+        if (!n.lostHealth) {
+            n.lostHealth = 0
+        }
+        m.innerHTML = MocoSpaceAPI.String.getString("Took {0} damage", [n.lostHealth], false)
+    }
+    var h = document.querySelector("#game_fight_summary .xp_gained");
+    if (h) {
+        if (!n.playerGainedXP) {
+            n.playerGainedXP = 0
+        }
+        h.innerHTML = MocoSpaceAPI.String.getString("Gained {0} experience", [n.playerGainedXP], false)
+    }
+    var r = document.querySelector("#game_fight_summary .coins_stolen");
+    if (r) {
+        if (!n.awardedCoins) {
+            n.awardedCoins = 0
+        }
+        r.innerHTML = MocoSpaceAPI.String.getString("Stole ${0}", [formatCoins(n.awardedCoins)], false);
+        r.style.display = ""
+    }
+    var l = document.querySelector("#game_fight_summary .competition_points");
+    if (n.competitionPoints && l) {
+        l.innerHTML = MocoSpaceAPI.String.getString("You won {0} battle points!", [formatCoins(n.competitionPoints)], false);
+        l.style.display = ""
+    } else {
+        if (l) {
+            l.innerHTML = "";
+            l.style.display = "none"
+        }
+    }
+    var c = document.querySelector("#game_fight_summary .bounty_won");
+    if (n.bountyWon && c) {
+        c.innerHTML = MocoSpaceAPI.String.getString("You won a ${0} bounty prize!", [formatCoins(n.bountyWon)], false);
+        c.style.display = "";
+        document.querySelector("#game_fight_box").style.background = "darkred"
+    }
+    var g = false,
+        b = false;
+    if (n.showTutorialFightDone) {
+        var j = document.querySelector("div.game_icon_tutorial_indicator");
+        var p = document.querySelector("div.game_block.half_left a.game_tutorial_glow_dialog");
+        if (j) {
+            j.parentNode.removeChild(j);
+            var d = document.querySelector("#game_fight_done_button");
+            d.appendChild(j);
+            g = true;
+            b = true
+        }
+        if (p) {
+            MocoSpaceUI.Util.removeClass(p, "game_tutorial_glow_dialog");
+            var o = document.querySelector("#game_fight_done_button a.game_button");
+            MocoSpaceUI.Util.addClass(o, "game_tutorial_glow")
+        }
+        var i = document.getElementById("tutorial_tap_again");
+        var k = document.getElementById("tutorial_tap_done");
+        MocoSpaceUI.Util.hide(i);
+        MocoSpaceUI.Util.show(k)
+    } else {
+        var i = document.getElementById("tutorial_tap_again");
+        if (i) {
+            var q = Math.floor(Math.random() * (5 - 1)) + 1;
+            var f = document.getElementById("tutorial_tap_again_" + q);
+            if (f) {
+                i.innerHTML = f.innerHTML
+            }
+            g = true
+        }
+    }
+    if (n.showTapDone) {
+        var a = document.getElementById("opponent_defeated");
+        MocoSpaceUI.Util.show(a);
+        var e = document.getElementById("fight_again");
+        if (e) {
+            e.innerHTML = MocoSpaceAPI.String.getString("Doc'd!")
+        }
+        disable_button(e);
+        g = true;
+        b = true
+    }
+    if (g) {
+        MocoSpaceUI.Util.show(document.getElementById("game_fight_message_box"))
+    }
+    if (b) {
+        MocoSpaceUI.Util.addClass(document.getElementById("game_dialog"), "opponent_defeated")
+    }
+    if (n.fightResult) {
+        MocoSpaceUI.Util.removeClass(document.getElementById("game_dialog"), "fight_lost");
+        t.innerHTML = MocoSpaceAPI.String.getString("You win!");
+        MocoSpaceUI.Util.removeClass(t, "color_red");
+        if (document.querySelector("#game_fight_loser img.target_image")) {
+            document.querySelector("#game_fight_loser img.target_image").style.display = ""
+        }
+        if (document.querySelector("#game_fight_loser img.self_image")) {
+            document.querySelector("#game_fight_loser img.self_image").style.display = "none"
+        }
+    } else {
+        MocoSpaceUI.Util.addClass(document.getElementById("game_dialog"), "fight_lost");
+        t.innerHTML = MocoSpaceAPI.String.getString("You lose!");
+        MocoSpaceUI.Util.addClass(t, "color_red");
+        if (document.querySelector("#game_fight_loser img.self_image")) {
+            document.querySelector("#game_fight_loser img.self_image").style.display = ""
+        }
+        if (document.querySelector("#game_fight_loser img.target_image")) {
+            document.querySelector("#game_fight_loser img.target_image").style.display = "none"
+        }
+    }
+}
+
+function updateJamResult(e) {
+    var h = document.querySelector("#game_dialog_title span");
+    var b = document.querySelector("#game_fight_summary");
+    var c = document.querySelector("#game_fight_box div.game_fight_user.winner");
+    var d = document.querySelector("#game_fight_box div.game_fight_user.loser");
+    var a = c.querySelector("img");
+    var f = d.querySelector("img");
+    var g = document.querySelector("#game_fight_box div.game_fight_user.self_image img");
+    var j = document.querySelector("#game_fight_box div.game_fight_user.target_image img");
+    if (b && typeof e.playerGainedXP !== "undefined") {
+        var i = [e.playerGainedXP, ""];
+        if (typeof e.awardedCoins !== "undefined") {
+            i.pop();
+            i.push(" " + MocoSpaceAPI.String.getString('and <span class="color_cash">${0}</span>', [e.awardedCoins], false))
+        }
+        b.innerHTML = MocoSpaceAPI.String.getString('Gained <span class="color_exp">{0} experience</span>{1}!', i, false)
+    }
+    c.removeChild(a);
+    d.removeChild(f);
+    if (e.fightResult) {
+        h.innerHTML = MocoSpaceAPI.String.getString("You Rock!");
+        c.appendChild(g);
+        d.appendChild(j);
+        MocoSpaceUI.Util.removeClass(c, "target_image");
+        MocoSpaceUI.Util.addClass(c, "self_image");
+        MocoSpaceUI.Util.removeClass(d, "self_image");
+        MocoSpaceUI.Util.addClass(d, "target_image")
+    } else {
+        h.innerHTML = MocoSpaceAPI.String.getString("You Got Rocked!");
+        c.appendChild(j);
+        d.appendChild(g);
+        MocoSpaceUI.Util.removeClass(c, "self_image");
+        MocoSpaceUI.Util.addClass(c, "target_image");
+        MocoSpaceUI.Util.removeClass(d, "target_image");
+        MocoSpaceUI.Util.addClass(d, "self_image")
+    }
+}
+
+function updateMissionResult(n, B, C) {
+    var A = document.getElementById("game_dialog");
+    var o = document.querySelector("#game_dialog_title span.func_title_text");
+    var s = document.getElementById("mastery_coins_earned");
+    var p = document.getElementById("xp_needed_level");
+    if (typeof n.didUnlockLocation !== "undefined" && n.didUnlockLocation) {
+        var q = document.getElementById("game_mastery");
+        var h = document.getElementById("location_unlocked_message");
+        var D = A.querySelectorAll("div.game_button_row");
+        if (A) {
+            MocoSpaceUI.Util.addClass(A, "blue_theme")
+        }
+        if (o) {
+            o.innerHTML = MocoSpaceAPI.String.getString("Location Unlocked")
+        }
+        if (q) {
+            MocoSpaceUI.Util.hide(q)
+        }
+        if (h && typeof n.unlockedLocationName !== "undefined" && typeof n.locationName !== "undefined") {
+            h.innerHTML = MocoSpaceAPI.String.getString("By mastering all missions in <strong>{0}</strong>, you can now travel to <strong>{1}</strong>", [n.locationName, n.unlockedLocationName], false);
+            MocoSpaceUI.Util.show(h)
+        }
+        if (s && typeof n.locationMasteryCash !== "undefined") {
+            var i = 0;
+            if (typeof n.locationMasteryCash !== "undefined") {
+                i += n.locationMasteryCash
+            }
+            s.innerHTML = MocoSpaceAPI.String.getString("You earned a <strong>${0}</strong> bonus!", [formatCoins(i)], false);
+            MocoSpaceUI.Util.show(s)
+        }
+        if (p) {
+            MocoSpaceUI.Util.hide(p)
+        }
+        if (D && D.length == 2) {
+            var w = D[1].querySelector("a");
+            var z = w.getAttribute("href").replace("{%}", n.unlockedLocationId);
+            w.setAttribute("href", z);
+            MocoSpaceUI.Util.hide(D[0]);
+            setTimeout(function() {
+                MocoSpaceUI.Util.show(D[1])
+            }, 2500)
+        }
+    } else {
+        var E = document.getElementById("game_mastery_fill");
+        var u = document.querySelector("#game_mastery_text span.value");
+        if (E && u && typeof B.percentMastered !== "undefined") {
+            E.style.width = B.percentMastered % 100 + "%";
+            u.innerHTML = formatCoins(B.percentMastered) + "%"
+        }
+        var c = document.querySelectorAll("#game_dialog_reward .third");
+        if (c.length == 3) {
+            c[0].innerHTML = "-" + n.energy + '<div class="game_icon_energy"></div>';
+            c[1].innerHTML = "+" + formatCoins(n.xpGain) + '<span class="game_small_text color_exp">XP</span>';
+            c[2].innerHTML = formatCoins(n.coinGain)
+        }
+        if (n.justMasteredMission) {
+            if (s && n.missionMasteryCash) {
+                s.innerHTML = MocoSpaceAPI.String.getString("You earned a <strong>${0}</strong> bonus!", [formatCoins(n.missionMasteryCash)], false);
+                MocoSpaceUI.Util.show(s)
+            }
+        } else {
+            MocoSpaceUI.Util.hide(s)
+        }
+        if (p && typeof C.energy !== "undefined" && typeof C.currentXP !== "undefined") {
+            if (C.energy < B.energy) {
+                p.innerHTML = MocoSpaceAPI.String.getString("Your energy is low.")
+            } else {
+                var b = document.getElementById("maxLevel");
+                var g = undefined;
+                if (b) {
+                    g = parseInt(stripNonNumeric(b.innerHTML))
+                }
+                var t = C.nextLevelNeededXP;
+                var f = C.level + 1;
+                if (g == undefined || f <= g) {
+                    p.innerHTML = MocoSpaceAPI.String.getString("<strong>{0} XP</strong> needed for <strong>Level {1}</strong>", [formatCoins(t), formatCoins(f)], false)
+                }
+                if (n.playerGainedSkill && C.level) {
+                    if (n.playerGainedSkill > 0) {
+                        p.innerHTML = "<span>" + MocoSpaceAPI.String.getString("You gained <strong>{0} skill points</strong>!", [n.playerGainedSkill], false) + "</span>"
+                    } else {
+                        p.innerHTML = ""
+                    }
+                }
+            }
+        }
+    }
+    var a = [];
+    var m = [];
+    var v = MocoSpaceAPI.String.getString("Gained Loot");
+    var j = MocoSpaceAPI.String.getString("Used Items");
+    if (n.missionMasteryItem) {
+        v = MocoSpaceAPI.String.getString("Mission mastery reward!");
+        a.push(n.missionMasteryItem)
+    }
+    if (n.locationMasteryItem) {
+        v = MocoSpaceAPI.String.getString("Location mastery reward!");
+        a.push(n.locationMasteryItem)
+    }
+    if (n.locationMasteryBoost) {
+        v = MocoSpaceAPI.String.getString("Location mastery reward!");
+        a.push(n.locationMasteryBoost)
+    }
+    var l = document.querySelector("#loots");
+    if (n.gainedLoot) {
+        if (Object.prototype.toString.call(n.gainedLoot).slice(8, -1) === "Array") {
+            a = a.concat(n.gainedLoot)
+        } else {
+            a.push(n.gainedLoot)
+        }
+        if (!n.didUnlockLocation) {
+            if (l) {
+                l.innerHTML = ""
+            } else {
+                l = document.createElement("div");
+                l.id = "loots";
+                document.querySelector("#game_dialog_content").appendChild(l)
+            }
+            var e = l.getAttribute("data-total-loot-attack");
+            if (!e) {
+                e = 0
+            }
+            var y = l.getAttribute("data-total-loot-defense");
+            if (!y) {
+                y = 0
+            }
+            var r = l.getAttribute("data-total-loot-upkeep");
+            if (!r) {
+                r = 0
+            }
+            for (var x = 0; x <= a.length - 1; x++) {
+                e = parseInt(e) + parseInt(a[x].attack);
+                y = parseInt(y) + parseInt(a[x].defense);
+                r = parseInt(r) + parseInt(a[x].upkeep)
+            }
+            l.setAttribute("data-total-loot-attack", e);
+            l.setAttribute("data-total-loot-defense", y);
+            l.setAttribute("data-total-loot-upkeep", r);
+            var k = '<div class="loot_title game_box_inset game_premium_glow">' + v + " ( " + formatCoins(e) + ' <span class="game_icon_attack"></span> ' + formatCoins(y) + ' <span class="game_icon_defense"></span> ' + formatCoins(r) + ' <span class="game_icon_upkeep game_icon_three_quarters"></span> )</div>';
+            for (var x = 0; x <= a.length - 1; x++) {
+                var d = '<div class="game_item game_box_inset game_premium_glow"><div class="game_item_name">' + a[x].name + '</div><div class="game_item_stats"><img src="' + a[x].imageSrc + '" alt="" /><br/>' + addCommas(a[x].attack) + ' <div class="game_icon_attack"></div><br/>' + addCommas(a[x].defense) + ' <div class="game_icon_defense"></div></div></div>';
+                k += d
+            }
+            l.innerHTML = k;
+            a = []
+        }
+    } else {
+        if (l) {
+            var e = l.getAttribute("data-total-loot-attack");
+            if (!e) {
+                e = 0
+            }
+            var y = l.getAttribute("data-total-loot-defense");
+            if (!y) {
+                y = 0
+            }
+            var r = l.getAttribute("data-total-loot-upkeep");
+            if (!r) {
+                r = 0
+            }
+            l.innerHTML = '<div class="loot_title game_box_inset game_premium_glow">' + v + " ( " + formatCoins(e) + ' <span class="game_icon_attack"></span> ' + formatCoins(y) + ' <span class="game_icon_defense"></span> ' + formatCoins(r) + ' <span class="game_icon_upkeep game_icon_three_quarters"></span> )</div><div class="game_item"><div class="game_item_name"></div></div>'
+        }
+    }
+    if (a.length > 0) {
+        addItemsToDialog(v, a, n.lootHelpText);
+        toggle_modal("game_modal_2")
+    }
+    if (n.consumedItems && !n.didUnlockLocation) {
+        if (Object.prototype.toString.call(n.consumedItems).slice(8, -1) === "Array") {
+            m = a.concat(n.consumedItems)
+        } else {
+            m.push(n.consumedItems)
+        }
+        var l = document.querySelector("#consumed");
+        if (l) {
+            l.innerHTML = ""
+        } else {
+            l = document.createElement("div");
+            l.id = "consumed";
+            document.querySelector("#game_dialog_content").appendChild(l)
+        }
+        var k = '<div style="text-align: center; margin: 10px; color: black;">' + j + "</div><table><tbody><tr>";
+        for (var x = 0; x <= m.length - 1; x++) {
+            var d = '<td><div class="game_item" style="background: rgba(0, 0, 0, 0.32);"><div class="game_item_name">' + m[x].name + " &times;" + m.length + '</div><div class="game_item_stats"><img src="' + m[x].imageSrc + '" alt="" /><br/>' + m[x].attack + '<div class="game_icon_attack"></div>' + m[x].defense + '<div class="game_icon_defense"></div></div></td>';
+            if ((x + 1) % 3 == 0) {
+                d += "</tr><tr>"
+            }
+            k += d;
+            break
+        }
+        k += "</tr></tbody></table>";
+        l.innerHTML = k;
+        m = []
+    } else {
+        if (document.querySelector("#consumed")) {
+            document.querySelector("#consumed").innerHTML = ""
+        }
+    }
+}
+
+function addItemsToDialog(h, c, f) {
+    var a = document.querySelector("#game_modal_2 div.game_modal_title");
+    a.innerHTML = h;
+    var g = document.querySelector("#game_modal_2 div.game_modal_content tr");
+    g.innerHTML = "";
+    for (var e = 0; e <= c.length - 1; e++) {
+        var d = document.createElement("td");
+        d.innerHTML = '<div class="game_item"><div class="game_item_name">' + c[e].name + '</div><div class="game_item_stats"><img src="' + c[e].imageSrc + '" alt="" /><br />';
+        if (c[e].attack) {
+            d.innerHTML += c[e].attack + '<div class="game_icon_attack"></div>'
+        }
+        if (c[e].defense) {
+            d.innerHTML += c[e].defense + '<div class="game_icon_defense"></div>'
+        }
+        if (!c[e].count && !c[e].attack && !c[e].defense) {
+            c[e].count = 1
+        }
+        if (c[e].count) {
+            d.innerHTML += c[e].count + "x"
+        }
+        d.innerHTML += "</div></div>";
+        g.appendChild(d)
+    }
+    if (typeof f !== "undefined") {
+        var b = g.parentNode;
+        b.innerHTML += "<tr><td><div>" + f + "</div></td></tr>"
+    }
+}
+
+function browsePlayersInit(a) {
+    var b = a ? document.getElementById("game_content").querySelectorAll(".recruit_" + a) : document.getElementById("game_content").querySelectorAll(".recruit");
+    MocoSpaceUI.Util.each(b, function(d) {
+        d.setAttribute("data-executing", 0);
+        var f = d.getAttribute("data-tid");
+        var e = d.getAttribute("data-public-validator");
+        var g = d.getAttribute("data-private-validator");
+        var c = function(j) {
+            var i = this;
+            var k = j;
+            if (!parseInt(i.getAttribute("data-executing"))) {
+                MocoSpaceUI.Util.addClass(i, "disabled_recruit_button");
+                i.setAttribute("data-executing", 1);
+                var h = {
+                    onError: function(n, l, m) {
+                        StreetWarsUtils.handleErrorRedirect(m);
+                        i.setAttribute("data-executing", 0)
+                    },
+                    onSuccess: function(m) {
+                        if (m.redirect) {
+                            var p = window.gp_settings.isFakeWk ? "&fakeWk=true" : "";
+                            if (window.gp_settings.isFakeWk && m.redirect.indexOf("fakeWk=true") == -1) {
+                                m.redirect += p
+                            }
+                            window.location = m.redirect
+                        } else {
+                            if (m.stats) {
+                                updateHeaderStats(m.stats)
+                            }
+                            MocoSpaceUI.Util.addClass(i, "game_glow_1");
+                            i.innerHTML = '<span style="color: lightgreen;">&checkmark;</span>';
+                            if (m.actionResultMessage) {
+                                displayActionResultMessage(m.actionResultMessage, null, 2000)
+                            }
+                            if (m.autoAccept) {
+                                try {
+                                    var l = document.getElementById("remaining_auto_accept_count");
+                                    if (l && parseInt(l.innerHTML) > 0) {
+                                        l.innerHTML = parseInt(l.innerHTML) - 1
+                                    }
+                                } catch (n) {}
+                            }
+                            if (m.autoScroll && k.pageY) {
+                                window.scrollTo(0, k.pageY - 5)
+                            }
+                        }
+                        i.setAttribute("data-executing", 0);
+                        var o = document.getElementById("mob_boost_link");
+                        if (o && o.style.display != "none") {
+                            o.style.display = "none"
+                        }
+                    }
+                };
+                sendMobRequest(f, e, g, h, j, i)
+            }
+            j.preventDefault();
+            return false
+        };
+        d.addEventListener("click", c);
+        MocoSpaceUI.Util.removeClass(d, "disabled")
+    })
+}
+
+function journalInit() {
+    var c = document.getElementById("game_content").querySelectorAll("a.approve,a.reject");
+    MocoSpaceUI.Util.each(c, function(e) {
+        e.setAttribute("data-executing", 0);
+        var g = e.getAttribute("href").match(/id%3D(-?\d*)/)[1];
+        var f = e.getAttribute("class").match("approve") ? true : false;
+        var d = function(k) {
+            var j = this;
+            if (!parseInt(j.getAttribute("data-executing"))) {
+                j.setAttribute("data-executing", 1);
+                var i = j.parentNode.parentNode;
+                var h = {
+                    onError: function(n, l, m) {
+                        StreetWarsUtils.handleErrorRedirect(m);
+                        j.setAttribute("data-executing", 0)
+                    },
+                    onSuccess: function(l) {
+                        if (l.stats) {
+                            updateHeaderStats(l.stats)
+                        }
+                        displayActionResultMessage(l.actionResultMessage);
+                        destroyMessage(i);
+                        j.setAttribute("data-executing", 0)
+                    }
+                };
+                processMobRequest(f, g, h)
+            }
+            k.preventDefault();
+            return false
+        };
+        e.addEventListener("click", d)
+    });
+    var a = document.querySelector(".mob_size");
+    if (a && a.className && a.className.indexOf("game_glow_1") != -1) {
+        a.className = a.className.replace(" game_glow_1", "")
+    }
+    if (a && a.className && a.className.indexOf("game_glow_2") != -1) {
+        a.className = a.className.replace(" game_glow_2", "")
+    }
+    var b = document.querySelector("#game_header .icon_invite");
+    if (b) {
+        b.className = "icon_inbox"
+    }
+}
+
+function fightInit(b) {
+    var d = document.getElementById("fight_again");
+    if (d) {
+        d.onclick = null;
+        d.setAttribute("data-executing", 0);
+        var f = d.getAttribute("href").match(/opponentId%3D(\d*)/)[1];
+        var a = function(i) {
+            var g = this;
+            if (!parseInt(g.getAttribute("data-executing"))) {
+                g.setAttribute("data-executing", 1);
+                g.setAttribute("data-executing-start", new Date().getTime());
+                MocoSpaceUI.Util.addClass(g, "disabled");
+                var h = {
+                    onError: function(l, j, k) {
+                        StreetWarsUtils.handleErrorRedirect(k);
+                        if (l && typeof l == "string") {
+                            displayActionResultMessage(l, MocoSpaceUI.Header.MessageType.WARNING)
+                        } else {
+                            g.setAttribute("data-executing", 0);
+                            MocoSpaceUI.Util.removeClass(g, "disabled")
+                        }
+                    },
+                    onSuccess: function(l) {
+                        if (typeof l.error !== "undefined" || !l.fightResults) {
+                            var j = l.error == "stamina" ? 0 : (l.error == "health" ? 1 : 2);
+                            toggle_modal("game_modal_" + j, "game_dialog")
+                        } else {
+                            if (l.fightResults.playerGainedLevels > 0 && l.fightResults.showLevelUp) {
+                                b += "&awardedCoins=" + l.fightResults.awardedCoins;
+                                b += "&playerGainedSkill=" + l.fightResults.playerGainedSkill;
+                                b += "&fightResult=" + l.fightResults.fightResult;
+                                if (l.fightResults.awardedGold > 0) {
+                                    b += "&awardedGold=" + l.fightResults.awardedGold
+                                }
+                                window.location.href = b
+                            } else {
+                                if (l.stats) {
+                                    updateHeaderStats(l.stats)
+                                }
+                                displayActionResultMessage(l.actionResultMessage);
+                                if (l.game && l.game == 1000) {
+                                    updateFightResult(l.fightResults)
+                                } else {
+                                    updateJamResult(l.fightResults)
+                                }
+                            }
+                        }
+                        var k = document.getElementById("fight_again");
+                        if (k) {
+                            k.setAttribute("data-executing", 0)
+                        }
+                        MocoSpaceUI.Util.removeClass(k, "disabled")
+                    }
+                };
+                fightOpponent(f, h)
+            }
+            i.preventDefault();
+            return false
+        };
+        d.addEventListener("click", a, false)
+    }
+    var e = document.getElementById("quick_heal");
+    if (e) {
+        MocoSpaceStreetWars.healInit(e)
+    }
+    var c = document.getElementById("quick_heal_target");
+    if (c) {
+        MocoSpaceStreetWars.healTargetInit(c, c.dataset.targetId)
+    }
+}
+
+function missionInit(e, f) {
+    var d = f ? document.getElementById(f) : null;
+    if (!d) {
+        return
+    }
+    d.onclick = null;
+    var c = d.getAttribute("data-locationId");
+    var b = d.getAttribute("data-missionId");
+    var a = function(i) {
+        var g = this;
+        if (!parseInt(g.getAttribute("data-executing"))) {
+            g.setAttribute("data-executing", 1);
+            MocoSpaceUI.Util.addClass(g, "disabled");
+            var h = {
+                onSuccess: function(o) {
+                    if (!o) {
+                        g.removeAttribute("data-executing");
+                        MocoSpaceUI.Util.removeClass(g, "disabled");
+                        return
+                    }
+                    if (!o.missionResults) {
+                        window.location.href = e.dashboardUrl
+                    } else {
+                        if (o.missionResults.didUnlockLocation == "true") {
+                            e.unlockedLocationUrl += "?locationMasteryCash=" + o.missionResults.locationMasteryCash;
+                            e.unlockedLocationUrl += "&locationMasteryItem=" + o.missionResults.locationMasteryItem;
+                            e.unlockedLocationUrl += "&unlockedLocation=" + o.missionResults.unlockedLocation;
+                            window.location.href = e.unlockedLocationUrl
+                        } else {
+                            if (o.missionResults.showLevelUp) {
+                                e.levelupUrl += "?awardedCoins=" + o.mission.coinGain;
+                                e.levelupUrl += "&playerGainedSkill=" + o.missionResults.playerGainedSkill;
+                                if (o.missionResults.awardedGold > 0) {
+                                    e.levelupUrl += "&awardedGold=" + o.missionResults.awardedGold
+                                }
+                                window.location.href = e.levelupUrl
+                            } else {
+                                if (o.stats) {
+                                    updateHeaderStats(o.stats)
+                                }
+                                displayActionResultMessage(o.actionResultMessage);
+                                updateMissionResult(o.missionResults, o.mission, o.stats)
+                            }
+                        }
+                    }
+                    if (!o.mission || !o.mission.missionCap || o.mission.percentMastered < o.mission.missionCap) {
+                        g.removeAttribute("data-executing");
+                        MocoSpaceUI.Util.removeClass(g, "disabled")
+                    } else {
+                        if (o.mission.percentMastered >= o.mission.missionCap) {
+                            g.innerHTML = MocoSpaceAPI.String.getString("Mastered!");
+                            MocoSpaceUI.Util.addClass(document.getElementById("game_dialog"), "mission_mastered")
+                        }
+                    }
+                    if (o.missionResults && o.missionResults.showTapDone) {
+                        var n = document.querySelector("div.game_icon_tutorial_indicator");
+                        if (n) {
+                            n.parentNode.removeChild(n);
+                            var l = document.querySelector("div.game_block.half_right");
+                            l.appendChild(n)
+                        }
+                        var j = document.querySelector("a.game_tutorial_glow_dialog");
+                        MocoSpaceUI.Util.removeClass(j, "game_tutorial_glow_dialog");
+                        var m = document.querySelector("div.game_block.half_right a.game_button");
+                        MocoSpaceUI.Util.addClass(m, "game_tutorial_glow");
+                        var k = document.getElementById("tutorial_tap_again");
+                        var p = document.getElementById("tutorial_tap_done");
+                        MocoSpaceUI.Util.hide(k);
+                        MocoSpaceUI.Util.show(p)
+                    }
+                },
+                onError: function(n, l, o) {
+                    StreetWarsUtils.handleErrorRedirect(o);
+                    if (o.exception) {
+                        if (o.exception == "NotEnoughEnergyException") {
+                            var j = "game_modal_1";
+                            var k = o.energyNeeded ? o.energyNeeded : 0;
+                            var m = document.querySelector("#" + j + " div.game_modal_content p");
+                            m.innerHTML = MocoSpaceAPI.String.getString("You need <strong>{0} more energy</strong> to repeat this mission", [k], false);
+                            toggle_modal(j, "game_dialog");
+                            displayActionResultMessage()
+                        } else {
+                            if (o.exception == "NotEnoughMoneyException") {
+                                displayActionResultMessage(MocoSpaceAPI.String.getString("You don't have enough cash for that"))
+                            } else {
+                                if (o.exception == "TooLowLevelException") {
+                                    displayActionResultMessage(MocoSpaceAPI.String.getString("You need to reach a higher level to do that"))
+                                } else {
+                                    if (o.exception == "MissingRequiredItemsException") {
+                                        displayActionResultMessage(MocoSpaceAPI.String.getString("You need more items to complete the mission"))
+                                    } else {
+                                        if (o.exception == "MobTooSmallException") {
+                                            displayActionResultMessage(MocoSpaceAPI.String.getString("You need a bigger mob for this"))
+                                        } else {
+                                            if (o.exception == "LocationsNotMasteredException") {
+                                                displayActionResultMessage(MocoSpaceAPI.String.getString("You need to master all missions in previous locations before going to this one"))
+                                            } else {
+                                                if (o.exception == "LimitExceededException") {
+                                                    displayActionResultMessage(MocoSpaceAPI.String.getString("Warning: You were found to be using automation."))
+                                                } else {
+                                                    if (o.exception == "MissionMasteryLimitReached") {
+                                                        displayActionResultMessage(MocoSpaceAPI.String.getString("You have maxed out your mission mastery for this mission. Move on and mob up!"))
+                                                    } else {
+                                                        if (o.exception == "CaptchaRequiredException") {
+                                                            var p = window.gp_settings.isFakeWk ? "&fakeWk=true" : "";
+                                                            window.location = "/wap2/game/streetwars/captcha.jsp?capfn=streetwars.mission.request.captcha&fwd=/wap2/game/streetwars/mission-list.jsp" + p
+                                                        } else {
+                                                            if (o.exception == "PlayerLockException") {
+                                                                g.removeAttribute("data-executing");
+                                                                MocoSpaceUI.Util.removeClass(g, "disabled")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        g.removeAttribute("data-executing");
+                        MocoSpaceUI.Util.removeClass(g, "disabled")
+                    }
+                }
+            };
+            doMission(c, b, h, i, d)
+        }
+        i.preventDefault();
+        return false
+    };
+    d.addEventListener("click", a, false)
+}
+
+function addFriendToMob(c, b) {
+    if (!c) {
+        throw "addFriendToMob: targetId required"
+    }
+    b = b || {};
+    var a = "/servlet/api/internalgame/addFriendToMob.do";
+    var d = {
+        targetId: c
+    };
+    MocoSpaceAPI.executePOSTRequest(a, b, d)
+}
+
+function formatCoins(a) {
+    var b;
+    if (Math.abs(a) > 999950000000000) {
+        b = addCommas((Math.round((a / 1000000000000000) * 10) / 10)) + "q"
+    } else {
+        if (Math.abs(a) > 999950000000) {
+            b = addCommas((Math.round((a / 1000000000000) * 10) / 10)) + "t"
+        } else {
+            if (Math.abs(a) > 999950000) {
+                b = (Math.round((a / 1000000000) * 10) / 10) + "b"
+            } else {
+                if (Math.abs(a) > 999500) {
+                    b = (Math.round((a / 1000000) * 10) / 10) + "m"
+                } else {
+                    if (Math.abs(a) > 99999) {
+                        b = (Math.round((a / 1000) * 10) / 10) + "k"
+                    } else {
+                        if (Math.abs(a) > 999) {
+                            b = addCommas(a)
+                        } else {
+                            b = a
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return b
+}
+
+function formatTimeQuantity(c) {
+    var e, f = c / 1000,
+        b = false,
+        a = [];
+    for (var d = 0; d < 4 && !b; d++) {
+        if (f < 60) {
+            a[0] = ~~f;
+            b = true
+        } else {
+            if (f < 3600) {
+                e = ~~(f / 60);
+                f = f - (e * 60);
+                a[1] = e
+            } else {
+                if (f < 86400) {
+                    e = ~~(f / 3600);
+                    f = f - (e * 3600);
+                    a[2] = e
+                } else {
+                    e = ~~(f / 86400);
+                    f = f - (e * 86400);
+                    a[3] = e
+                }
+            }
+        }
+    }
+    return a
+}
+var energyRechargeCallback = energyRechargeCallback || function() {};
+
+function headerHealth(a) {
+    runTimer("health", a)
+}
+
+function headerEnergy(a, b) {
+    runTimer("energy", a, b)
+}
+
+function headerStamina(a) {
+    runTimer("stamina", a)
+}
+
+function incomeTimer(b, a) {
+    runTimer("income", b, null, a)
+}
+var timers = [];
+
+function runTimer(d, g, h, c, f) {
+    if (timers[d]) {
+        return
+    } else {
+        timers[d] = d
+    }
+    if (!f) {
+        f = document
+    }
+    var e = f.getElementById("game_" + d + "_timer");
+    var a = f.querySelector("#game_" + d + "_total span");
+    var b = parseInt(e.getAttribute("data-time-max"));
+    if (typeof g === "undefined") {
+        g = b
+    }
+    e.count = function(l) {
+        e.innerHTML = formatExpiration(l * 1000);
+        if (typeof c === "function") {
+            c(l, b)
+        }
+        if (l == 0) {
+            var k = a != null && a.getAttribute("data-increment") ? parseInt(a.getAttribute("data-increment")) : 1;
+            var m = a != null ? parseInt(a.getAttribute("data-" + d)) + k : 1;
+            var j = a != null ? parseInt(a.getAttribute("data-" + d + "-max")) : 1;
+            if (m > j) {
+                m = j
+            }
+            if (d == "battle") {
+                location.reload(true);
+                return
+            }
+            if (a) {
+                a.innerHTML = StreetWarsUtils.obfuscate(m);
+                a.setAttribute("data-" + d, m)
+            }
+            if (typeof h == "function") {
+                h(m)
+            }
+            if (m < j) {
+                l = b
+            } else {
+                e.innerHTML = "";
+                timers[d] = null;
+                return
+            }
+        }
+        setTimeout(function() {
+            e.count(l - 1)
+        }, 1000)
+    };
+    e.count(g)
+}
+
+function formatExpiration(f) {
+    var e = Math.floor(f / (3600000 * 24));
+    var c = "";
+    if (e > 7) {
+        c = e + " " + MocoSpaceAPI.String.getString("days")
+    } else {
+        var b = Math.floor((f / 3600000) - (e * 24));
+        var d = Math.floor((f / 60000) - (b * 60 + e * 24 * 60));
+        if (d < 10) {
+            d = "0" + d
+        }
+        var a = Math.floor((f / 1000) % 60);
+        if (a < 10) {
+            a = "0" + a
+        }
+        if (e * 24 + b > 0) {
+            c = e * 24 + b + ":"
+        }
+        c += d + ":" + a
+    }
+    return c
+}
+
+function toggle(b) {
+    var a = document.getElementById(b);
+    if (a) {
+        a.style.display = (a.style.display != "block" ? "block" : "none")
+    }
+}
+
+function toggle_modal(f, c, e) {
+    var a = document.getElementById(f),
+        d = document.getElementById("game_overlay"),
+        g = document.getElementById("ad_top"),
+        b = document.getElementById("ad_bottom");
+    if (!a || !d) {
+        return
+    }
+    if (typeof e == "string") {
+        a.querySelector("div.game_modal_content p").innerHTML = e
+    }
+    if (d.style.display != "block") {
+        d.style.height = document.getElementById("game_container").offsetHeight + "px";
+        d.style.display = "block";
+        a.style.display = "block";
+        if (g) {
+            g.style.display = "none"
+        }
+        if (b) {
+            b.style.display = "none"
+        }
+    } else {
+        a.style.display = "none";
+        d.style.display = "none";
+        if (g) {
+            g.style.display = "block"
+        }
+        if (b) {
+            b.style.display = "block"
+        }
+    }
+}
+
+function toggle_interstitial() {
+    var b = document.getElementById("game_interstitial");
+    var a = b.querySelector("div.game_modal");
+    if (!a || !b) {
+        return
+    }
+    if (b.style.display != "block") {
+        b.style.height = document.getElementById("game_container").offsetHeight + "px";
+        b.style.display = "block";
+        a.style.display = "block"
+    } else {
+        a.style.display = "none";
+        b.style.display = "none"
+    }
+}
+var favorSelectListeners = {};
+
+function showFavorSelect(g, b) {
+    var d = document.getElementById(g);
+    if (!d) {
+        if (console) {
+            console.log("showFavorSelect: bad dialog id")
+        }
+        return
+    }
+    if (!b || typeof b.id == "undefined" || typeof b.name == "undefined" || typeof b.cash == "undefined") {
+        if (console) {
+            console.log("showFavorSelect: bad playerDetails object")
+        }
+        return
+    }
+    var a = function(k, h) {
+        var j = document.getElementById(h);
+        var i = j.querySelector("form input.target_id");
+        i.setAttribute("value", b.id);
+        MocoSpaceUI.Dialog.show({
+            id: h
+        });
+        k.preventDefault();
+        return
+    };
+    var f = d.querySelectorAll("a.give_favor");
+    for (var e in f) {
+        if (isNaN(e)) {
+            continue
+        }
+        if (MocoSpaceUI.Util.hasClass(f[e], "favor_gift")) {
+            var c = f[e];
+            c.setAttribute("data-id", b.id);
+            if (favorSelectListeners.gift) {
+                c.removeEventListener("click", favorSelectListeners.gift, false)
+            }
+            favorSelectListeners.gift = function(i) {
+                var j = c.getAttribute("data-id");
+                var h = c.getAttribute("href");
+                window.location.href = h.replace("ID_PLACE_HOLDER", j);
+                i.preventDefault();
+                return false
+            };
+            c.addEventListener("click", favorSelectListeners.gift, false)
+        } else {
+            if (MocoSpaceUI.Util.hasClass(f[e], "favor_wire")) {
+                if (favorSelectListeners.wire) {
+                    f[e].removeEventListener("click", favorSelectListeners.wire, false)
+                }
+                favorSelectListeners.wire = function(h) {
+                    a(h, "favor-wire-dialog")
+                };
+                f[e].addEventListener("click", favorSelectListeners.wire, false)
+            } else {
+                if (MocoSpaceUI.Util.hasClass(f[e], "favor_deposit")) {
+                    if (favorSelectListeners.deposit) {
+                        f[e].removeEventListener("click", favorSelectListeners.deposit, false)
+                    }
+                    favorSelectListeners.deposit = function(h) {
+                        a(h, "favor-deposit-dialog")
+                    };
+                    f[e].addEventListener("click", favorSelectListeners.deposit, false);
+                    if (parseInt(b.cash) <= 0) {
+                        MocoSpaceUI.Util.addClass(f[e].parentNode, "hidden")
+                    } else {
+                        MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                    }
+                } else {
+                    if (MocoSpaceUI.Util.hasClass(f[e], "favor_protect_supplyline")) {
+                        if (favorSelectListeners.supplyline) {
+                            f[e].removeEventListener("click", favorSelectListeners.supplyline, false)
+                        }
+                        favorSelectListeners.supplyline = function(h) {
+                            a(h, "favor-supplyline-dialog")
+                        };
+                        f[e].addEventListener("click", favorSelectListeners.supplyline, false)
+                    } else {
+                        if (MocoSpaceUI.Util.hasClass(f[e], "favor_heal")) {
+                            if (favorSelectListeners.heal) {
+                                f[e].removeEventListener("click", favorSelectListeners.heal, false)
+                            }
+                            favorSelectListeners.heal = function(h) {
+                                a(h, "favor-heal-dialog")
+                            };
+                            f[e].addEventListener("click", favorSelectListeners.heal, false);
+                            MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                        } else {
+                            if (MocoSpaceUI.Util.hasClass(f[e], "favor_autofight_pack")) {
+                                if (favorSelectListeners.afp) {
+                                    f[e].removeEventListener("click", favorSelectListeners.afp, false)
+                                }
+                                favorSelectListeners.afp = function(h) {
+                                    a(h, "favor-autofight-dialog")
+                                };
+                                f[e].addEventListener("click", favorSelectListeners.afp, false);
+                                MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                            } else {
+                                if (MocoSpaceUI.Util.hasClass(f[e], "favor_warautofight_pack")) {
+                                    if (favorSelectListeners.wafp) {
+                                        f[e].removeEventListener("click", favorSelectListeners.wafp, false)
+                                    }
+                                    favorSelectListeners.wafp = function(h) {
+                                        a(h, "favor-warautofight-dialog")
+                                    };
+                                    f[e].addEventListener("click", favorSelectListeners.wafp, false);
+                                    MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                                } else {
+                                    if (MocoSpaceUI.Util.hasClass(f[e], "favor_bounty_pack")) {
+                                        if (favorSelectListeners.bp) {
+                                            f[e].removeEventListener("click", favorSelectListeners.bp, false)
+                                        }
+                                        favorSelectListeners.bp = function(h) {
+                                            a(h, "favor-bounty-dialog")
+                                        };
+                                        f[e].addEventListener("click", favorSelectListeners.bp, false);
+                                        MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                                    } else {
+                                        if (MocoSpaceUI.Util.hasClass(f[e], "favor_skill_points")) {
+                                            if (favorSelectListeners.sp) {
+                                                f[e].removeEventListener("click", favorSelectListeners.sp, false)
+                                            }
+                                            favorSelectListeners.sp = function(h) {
+                                                a(h, "favor-skillpoints-dialog")
+                                            };
+                                            f[e].addEventListener("click", favorSelectListeners.sp, false);
+                                            MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                                        } else {
+                                            if (MocoSpaceUI.Util.hasClass(f[e], "favor_favor_pack")) {
+                                                if (favorSelectListeners.sp) {
+                                                    f[e].removeEventListener("click", favorSelectListeners.sp, false)
+                                                }
+                                                favorSelectListeners.sp = function(h) {
+                                                    a(h, "favor-favorpack-dialog")
+                                                };
+                                                f[e].addEventListener("click", favorSelectListeners.sp, false);
+                                                MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                                            } else {
+                                                if (MocoSpaceUI.Util.hasClass(f[e], "favor_battle_pass")) {
+                                                    if (favorSelectListeners.sp) {
+                                                        f[e].removeEventListener("click", favorSelectListeners.sp, false)
+                                                    }
+                                                    favorSelectListeners.sp = function(h) {
+                                                        a(h, "favor-battlepass-dialog")
+                                                    };
+                                                    f[e].addEventListener("click", favorSelectListeners.sp, false);
+                                                    MocoSpaceUI.Util.removeClass(f[e].parentNode, "hidden")
+                                                } else {
+                                                    if (console) {
+                                                        console.log("showFavorSelect: unknown favor link found, ignoring " + f[e])
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    MocoSpaceUI.Dialog.show({
+        id: g
+    });
+    return
+}
+
+function show_tab(e) {
+    var c = document.getElementsByTagName("li");
+    var b = document.getElementsByTagName("*");
+    for (var a = 0; a < c.length; a++) {
+        if (c[a].id == "game_tab_title_" + e) {
+            c[a].className += " selected";
+            var d = c[a].querySelector("div.game_icon_tutorial_indicator");
+            if (d) {
+                d.parentNode.removeChild(d)
+            }
+        } else {
+            if (c[a].id !== "game_tab_title_boosts") {
+                c[a].className = ""
+            }
+        }
+    }
+    for (var a = 0; a < b.length; a++) {
+        if (b[a].className == "game_tab_content") {
+            b[a].style.display = ((b[a].id == "game_tab_content_" + e) ? "block" : "none")
+        } else {
+            if (b[a].className == "game_box summation " + e) {
+                b[a].style.display = "block"
+            } else {
+                if (b[a].className.indexOf("game_box summation") > -1) {
+                    b[a].style.display = "none"
+                }
+            }
+        }
+    }
+    if (typeof MocoSpaceUI.Util.lazyload !== "undefined") {
+        MocoSpaceUI.Util.lazyload(document.querySelectorAll("#game_tab_content_" + e + " .game_item_image"))
+    }
+}
+
+function toggle_dropdown(b) {
+    var a = document.getElementById("game_dropdown_list");
+    a.style.display = (a.style.display == "block" ? "none" : "block");
+    if (b == undefined) {
+        a.style.top = -44 - a.offsetHeight + "px"
+    } else {
+        a.style.top = b + "px"
+    }
+}
+
+function select_dropdown(b, a) {
+    toggle_dropdown();
+    document.getElementById("game_dropdown_current").innerHTML = formatCoins(b);
+    document.getElementById("game_form_quantity").value = (a != null ? a : b)
+}
+
+function toggle_generic_dropdown(b) {
+    var a = document.getElementById(b);
+    a.style.display = (a.style.display == "block" ? "none" : "block");
+    a.style.top = -44 - a.offsetHeight + "px"
+}
+
+function select_generic_dropdown(c, b, e, d, a) {
+    toggle_generic_dropdown(e);
+    document.getElementById(c).innerHTML = d;
+    document.getElementById(b).value = (a != null ? a : d)
+}
+
+function selectFauxSelectOption(d, a, f) {
+    toggle_dropdown(f);
+    if (!a || !a.selected || !a.formValue) {
+        if (console) {
+            console.log("selectFauxDropdown: incorrectly formatted element object")
+        }
+        return false
+    }
+    var b = document.querySelector(a.selected);
+    var c = document.querySelector(a.formValue);
+    if (!b || !c) {
+        if (console) {
+            console.log("selectFauxDropdown: invalid querySelector strings for element")
+        }
+        return false
+    }
+    var e = d.value ? d.value : d;
+    if (!isNaN(parseFloat(e))) {
+        e = parseInt(e)
+    }
+    b.innerHTML = d.label ? d.label : e;
+    c.value = e
+}
+
+function canIncreasePoints(a) {
+    var b = new Number(document.getElementById("total_skill_points").value);
+    return (a <= b)
+}
+
+function incrementSkillPoint(h, a) {
+    var d = 1;
+    if ("attack" == h || "defense" == h) {
+        d = a;
+        a = 1 / a
+    }
+    if (document.getElementById("game_upgrade_increment")) {
+        d = new Number(document.getElementById("game_upgrade_increment").value) * d
+    }
+    if (canIncreasePoints(a * d)) {
+        var k = new Number(document.getElementById("game_form_increase_" + h).value);
+        k += d;
+        if (k > -1) {
+            document.getElementById("game_form_increase_" + h).value = k;
+            document.getElementById("game_form_display_" + h).innerHTML = k
+        }
+        var b = document.getElementById("total_skill_points").value - (a * d);
+        document.getElementById("total_skill_points").value = b;
+        document.getElementById("displayed_skill_points").innerHTML = b
+    }
+    var b = new Number(document.getElementById("total_skill_points").value);
+    if (b <= 0) {
+        var f = document.querySelectorAll("div.game_icon_tutorial_indicator");
+        if (typeof f !== "undefined" && f.length > 0) {
+            var e = null;
+            for (var c = 0; c < f.length; c++) {
+                var j = f[c];
+                j.parentNode.removeChild(j);
+                if (e == null) {
+                    e = j
+                }
+            }
+            if (e) {
+                var g = document.querySelector("#game_dialog_content div.game_button_row div.game_block.half_left");
+                g.appendChild(e)
+            }
+        }
+    }
+}
+
+function decrementSkillPoint(b, a) {
+    var d = new Number(document.getElementById("game_form_increase_" + b).value);
+    d--;
+    if (d >= 0) {
+        document.getElementById("game_form_increase_" + b).value = d;
+        document.getElementById("game_form_display_" + b).innerHTML = d;
+        var c = new Number(document.getElementById("total_skill_points").value) + a;
+        document.getElementById("total_skill_points").value = c;
+        document.getElementById("displayed_skill_points").innerHTML = c
+    }
+}
+
+function resetSkillPoint(q) {
+    var i = document.getElementById("game_form_increase_health");
+    var e = document.getElementById("game_form_display_health");
+    var f = document.getElementById("game_form_increase_defense");
+    var l = document.getElementById("game_form_display_defense");
+    var g = document.getElementById("game_form_increase_attack");
+    var r = document.getElementById("game_form_display_attack");
+    var s = document.getElementById("game_form_increase_attack_tier2");
+    var h = document.getElementById("game_form_display_attack_tier2");
+    var d = document.getElementById("game_form_increase_raid_energy");
+    var m = document.getElementById("game_form_increase_raid_attack");
+    var p = document.getElementById("game_form_increase_collectible_energy");
+    var b = document.getElementById("game_form_increase_territory_energy");
+    var j = document.getElementById("game_form_increase_heist_energy");
+    var k = document.getElementById("game_form_display_raid_energy");
+    var c = document.getElementById("game_form_display_raid_attack");
+    var a = document.getElementById("game_form_display_collectible_energy");
+    var o = document.getElementById("game_form_display_territory_energy");
+    var n = document.getElementById("game_form_display_heist_energy");
+    if (i) {
+        i.value = 0
+    }
+    if (e) {
+        e.innerHTML = 0
+    }
+    if (document.getElementById("game_form_increase_energy")) {
+        document.getElementById("game_form_increase_energy").value = 0
+    }
+    if (document.getElementById("game_form_display_energy")) {
+        document.getElementById("game_form_display_energy").innerHTML = 0
+    }
+    if (document.getElementById("game_form_increase_stamina")) {
+        document.getElementById("game_form_increase_stamina").value = 0
+    }
+    if (document.getElementById("game_form_display_stamina")) {
+        document.getElementById("game_form_display_stamina").innerHTML = 0
+    }
+    if (f) {
+        f.value = 0
+    }
+    if (l) {
+        l.innerHTML = 0
+    }
+    if (g) {
+        g.value = 0
+    }
+    if (r) {
+        r.innerHTML = 0
+    }
+    if (s) {
+        s.value = 0
+    }
+    if (h) {
+        h.innerHTML = 0
+    }
+    if (d) {
+        d.value = 0
+    }
+    if (m) {
+        m.value = 0
+    }
+    if (p) {
+        p.value = 0
+    }
+    if (b) {
+        b.value = 0
+    }
+    if (j) {
+        j.value = 0
+    }
+    if (k) {
+        k.innerHTML = 0
+    }
+    if (c) {
+        c.innerHTML = 0
+    }
+    if (a) {
+        a.innerHTML = 0
+    }
+    if (o) {
+        o.innerHTML = 0
+    }
+    if (n) {
+        n.innerHTML = 0
+    }
+    document.getElementById("total_skill_points").value = q;
+    document.getElementById("displayed_skill_points").innerHTML = q
+}
+
+function reset_input(e, d, c) {
+    var a = document.getElementById(e);
+    var b = (c == null ? false : c);
+    if (a.value == "") {
+        a.value = d
+    } else {
+        if ((a.value == d) && b) {
+            a.value = ""
+        }
+    }
+}
+
+function update_deposit(b, c) {
+    if (isNaN(b)) {
+        b = 0
+    }
+    if (isNaN(c)) {
+        c = 10
+    }
+    var a = Math.floor(b * c);
+    document.getElementById("game_span_fee").innerHTML = a;
+    document.getElementById("game_span_deposit").innerHTML = b - a
+}
+
+function disable_button(a) {
+    var b = document.createElement("div");
+    b.className = "game_button disabled";
+    b.innerHTML = (a.innerHTML);
+    if (typeof a.parentNode !== "undefined") {
+        a.parentNode.replaceChild(b, a)
+    }
+}
+
+function canPerformAction(f, a) {
+    for (var d in a) {
+        var c = 0;
+        switch (d) {
+            case "health":
+                c = parseInt(document.querySelector("#game_health_total span.health").getAttribute("data-health"));
+                break;
+            case "energy":
+                c = parseInt(document.querySelector("#game_energy_total span.energy").getAttribute("data-energy"));
+                break;
+            case "stamina":
+                c = parseInt(document.querySelector("#game_stamina_total span.stamina").getAttribute("data-stamina"));
+                break;
+            default:
+                break
+        }
+        try {
+            if (!a[d].dialog || isNaN(a[d].value)) {
+                throw "malformed checkStats object"
+            }
+            if (c < a[d].value) {
+                if (d == "energy") {
+                    toggle_modal(a[d].dialog, null, MocoSpaceAPI.String.getString("You need <strong>{0} more energy</strong> to attempt this mission", [a[d].value - c], false))
+                } else {
+                    toggle_modal(a[d].dialog)
+                }
+                f.preventDefault();
+                return false
+            }
+        } catch (b) {
+            if (console) {
+                console.log("canPerformAction error: " + b)
+            }
+        }
+    }
+}
+
+function stripNonNumeric(d) {
+    d += "";
+    var b = /^\d|\.|-$/;
+    var a = "";
+    for (var c = 0; c < d.length; c++) {
+        if (b.test(d.charAt(c))) {
+            if (!((d.charAt(c) == "." && a.indexOf(".") != -1) || (d.charAt(c) == "-" && a.length !== 0))) {
+                a += d.charAt(c)
+            }
+        }
+    }
+    return a
+}
+
+function addCommas(e) {
+    e += "";
+    var a = e.split(".");
+    var d = a[0];
+    var b = a.length > 1 ? "." + a[1] : "";
+    var c = /(\d+)(\d{3})/;
+    while (c.test(d)) {
+        d = d.replace(c, "$1,$2")
+    }
+    return d + b
+}
+var scrollFunction = function(c) {
+    var a = document.querySelectorAll(".game_modal");
+    var d = (c && c.scrollTop ? c.scrollTop : document.body.scrollTop || document.documentElement.scrollTop);
+    for (var b in a) {
+        if (isNaN(b)) {
+            continue
+        }
+        if (!a[b].style) {
+            a[b].style = {}
+        }
+        a[b].style.top = d + "px"
+    }
+};
+document.addEventListener("scroll", scrollFunction, false);
